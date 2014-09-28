@@ -1,9 +1,11 @@
-A client ID module for ZNC
-==========================
+A channel filter module for ZNC
+===============================
 
 ### Overview
 
-TODO
+This module is WIP; it requires unmerged changes to ZNC:
+
+https://github.com/jpnurmi/znc/commits/clientid
 
 ### Usage
 

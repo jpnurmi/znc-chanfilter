@@ -12,15 +12,15 @@
 #include <znc/Chan.h>
 #include <znc/Nick.h>
 
-class CClientIDMod : public CModule
+class CChanFilterMod : public CModule
 {
 public:
-    MODCONSTRUCTOR(CClientIDMod)
+    MODCONSTRUCTOR(CChanFilterMod)
     {
         AddHelpCommand();
-        AddCommand("AddClient", static_cast<CModCommand::ModCmdFunc>(&CClientIDMod::AddClientCommand), "<identifier>", "Add a client.");
-        AddCommand("DelClient", static_cast<CModCommand::ModCmdFunc>(&CClientIDMod::DelClientCommand), "<identifier>", "Delete a client.");
-        AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CClientIDMod::ListClientsCommand), "", "List clients.");
+        AddCommand("AddClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::AddClientCommand), "<identifier>", "Add a client.");
+        AddCommand("DelClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::DelClientCommand), "<identifier>", "Delete a client.");
+        AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::ListClientsCommand), "", "List clients.");
     }
 
     void AddClientCommand(const CString& line)
@@ -194,9 +194,9 @@ private:
     }
 };
 
-template<> void TModInfo<CClientIDMod>(CModInfo& Info)
+template<> void TModInfo<CChanFilterMod>(CModInfo& Info)
 {
-    Info.SetWikiPage("clientid");
+    Info.SetWikiPage("chanfilter");
 }
 
-NETWORKMODULEDEFS(CClientIDMod, "A client ID module for ZNC")
+NETWORKMODULEDEFS(CChanFilterMod, "A channel filter module for ZNC")
