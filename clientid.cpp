@@ -122,7 +122,14 @@ public:
                     channel = rest.Token(2);
                 else
                     channel = rest.Token(1);
-            } else if (cmd.Equals("PRIVMSG") || cmd.Equals("NOTICE") || cmd.Equals("JOIN") || cmd.Equals("PART") || cmd.Equals("MODE") || cmd.Equals("KICK") || cmd.Equals("TOPIC")) {
+            } else if (cmd.Equals("NOTICE")) {
+                if (nick.NickEquals("ChanServ")) {
+                    CString target = rest.Token(1).TrimPrefix_n(":[").TrimSuffix_n("]");
+                    if (network->IsChan(target) && !HasChannel(identifier, target))
+                        return HALT;
+                }
+                channel = rest.Token(0);
+            } else if (cmd.Equals("PRIVMSG") || cmd.Equals("JOIN") || cmd.Equals("PART") || cmd.Equals("MODE") || cmd.Equals("KICK") || cmd.Equals("TOPIC")) {
                 channel = rest.Token(0);
             }
             channel.TrimPrefix(":");
