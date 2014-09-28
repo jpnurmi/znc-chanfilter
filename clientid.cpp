@@ -8,7 +8,6 @@
 
 #include <znc/Modules.h>
 #include <znc/IRCNetwork.h>
-#include <znc/ZNCString.h>
 #include <znc/Client.h>
 #include <znc/Chan.h>
 #include <znc/Nick.h>
@@ -26,7 +25,7 @@ public:
 
     void AddClientCommand(const CString& line)
     {
-        if (!AddClient(line.Token(1), NULL)) {
+        if (!AddClient(line.Token(1))) {
             PutModule("Usage: AddClient <identifier>");
             return;
         }
@@ -44,60 +43,31 @@ public:
 
     void ListClientsCommand(const CString& = CString())
     {
-        if (m_clients.empty()) {
-            PutModule("No clients");
-        } else {
-            CTable Table;
-            Table.AddColumn("Client");
-            Table.AddColumn("Active");
-            Table.AddColumn("Channels");
-            for (const auto& it : m_clients) {
-                const SCString channels = GetChannels(it.first);
-                Table.AddRow();
-                Table.SetCell("Client", it.first);
-                Table.SetCell("Active", CString(it.second));
-                Table.SetCell("Channels", CString(",").Join(channels.begin(), channels.end()));
-            }
-            PutModule(Table);
+        CTable table;
+        table.AddColumn("Client");
+        table.AddColumn("Active");
+        table.AddColumn("Channels");
+        for (MCString::iterator it = BeginNV(); it != EndNV(); ++it) {
+            table.AddRow();
+            table.SetCell("Client", it->first);
+            table.SetCell("Active", CString(GetNetwork()->FindClient(it->first)));
+            table.SetCell("Channels", it->second.Ellipsize(128));
         }
+        if (table.empty())
+            PutModule("No identified clients");
+        else
+            PutModule(table);
     }
 
-    virtual void OnClientDisconnect()
+    virtual void OnClientLogin()
     {
-        AddClient(GetIdentifier(GetClient()), NULL);
-    }
-
-    virtual EModRet OnUnknownUserRaw(CClient* client, CString& line)
-    {
-        const CString cmd = line.Token(0);
-        if (cmd.Equals("PASS")) {
-            // [user[@identifier][/network]:]password
-            CString auth = line.Token(1, true).TrimPrefix_n();
-            const CString user = TakePrefix(auth, "@", false);
-            if (!user.empty()) {
-                CString identifier = TakePrefix(auth, "/", true);
-                if (identifier.empty())
-                    identifier = TakePrefix(auth, ":", true);
-                if (AddClient(identifier, client))
-                    line = cmd + " " + user + auth;
-            }
-        } else if (cmd.Equals("USER")) {
-            // user[@identifier][/network]
-            CString auth = line.Token(1, true).TrimPrefix_n();
-            const CString user = TakePrefix(auth, "@", false);
-            if (!user.empty()) {
-                const CString identifier = TakePrefix(auth, "/", true);
-                if (AddClient(identifier, client))
-                    line = cmd + " " + user + auth;
-            }
-        }
-        return CONTINUE;
+        AddClient(GetClient()->GetIdentifier());
     }
 
     virtual EModRet OnUserRaw(CString& line)
     {
         CClient* client = GetClient();
-        const CString identifier = GetIdentifier(client);
+        const CString identifier = client->GetIdentifier();
 
         if (!identifier.empty()) {
             const CString cmd = line.Token(0);
@@ -124,13 +94,13 @@ public:
     {
         EModRet ret = CONTINUE;
         CIRCNetwork* network = client.GetNetwork();
-        CString identifier = GetIdentifier(&client);
+        CString identifier = client.GetIdentifier();
 
         if (network && !identifier.empty()) {
             // discard message tags
             CString msg = line;
             if (msg.StartsWith("@"))
-                TakePrefix(msg, ";", false);
+                msg = msg.Token(1, true, ";");
 
             const CNick nick(msg.Token(0).TrimPrefix_n());
             const CString cmd = msg.Token(1);
@@ -167,21 +137,11 @@ public:
     }
 
 private:
-    CString GetIdentifier(CClient* client) const
-    {
-        for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
-            if (it->second == client)
-                return it->first;
-        }
-        return CString();
-    }
-
     SCString GetChannels(const CString& identifier) const
     {
-        auto it = m_channels.find(identifier);
-        if (it != m_channels.end())
-            return it->second;
-        return SCString();
+        SCString channels;
+        GetNV(identifier).Split(",", channels);
+        return channels;
     }
 
     bool HasChannel(const CString& identifier, const CString& channel) const
@@ -192,20 +152,26 @@ private:
 
     void AddChannel(const CString& identifier, const CString& channel)
     {
-        if (!identifier.empty())
-            m_channels[identifier].insert(channel.AsLower());
+        if (!identifier.empty()) {
+            SCString channels = GetChannels(identifier);
+            channels.insert(channel.AsLower());
+            SetNV(identifier, CString(",").Join(channels.begin(), channels.end()));
+        }
     }
 
     void DelChannel(const CString& identifier, const CString& channel)
     {
-        if (!identifier.empty())
-            m_channels[identifier].erase(channel.AsLower());
+        if (!identifier.empty()) {
+            SCString channels = GetChannels(identifier);
+            channels.erase(channel.AsLower());
+            SetNV(identifier, CString(",").Join(channels.begin(), channels.end()));
+        }
     }
 
-    bool AddClient(const CString& identifier, CClient* client)
+    bool AddClient(const CString& identifier)
     {
         if (!identifier.empty()) {
-            m_clients[identifier.AsLower()] = client;
+            SetNV(identifier, GetNV(identifier));
             return true;
         }
         return false;
@@ -214,28 +180,11 @@ private:
     bool DelClient(const CString& identifier)
     {
         if (!identifier.empty()) {
-            auto it = m_clients.find(identifier.AsLower());
-            if (it != m_clients.end())
-                m_clients.erase(it);
+            DelNV(identifier);
             return true;
         }
         return false;
     }
-
-    static CString TakePrefix(CString& line, const CString& separator, bool retain)
-    {
-        CString prefix;
-        if (line.find(separator) != CString::npos) {
-            prefix = line.Token(0, false, separator);
-            line = line.Token(1, true, separator);
-            if (retain)
-                line.insert(0, separator);
-        }
-        return prefix;
-    }
-
-    std::map<CString, CClient*> m_clients;
-    std::map<CString, SCString> m_channels;
 };
 
 template<> void TModInfo<CClientIDMod>(CModInfo& Info)
@@ -243,4 +192,4 @@ template<> void TModInfo<CClientIDMod>(CModInfo& Info)
     Info.SetWikiPage("clientid");
 }
 
-GLOBALMODULEDEFS(CClientIDMod, "A client ID module for ZNC")
+NETWORKMODULEDEFS(CClientIDMod, "A client ID module for ZNC")
