@@ -100,7 +100,7 @@ public:
             // discard message tags
             CString msg = line;
             if (msg.StartsWith("@"))
-                msg = msg.Token(1, true, ";");
+                msg = msg.Token(1, true);
 
             const CNick nick(msg.Token(0).TrimPrefix_n());
             const CString cmd = msg.Token(1);
