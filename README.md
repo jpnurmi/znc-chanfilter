@@ -3,25 +3,13 @@ A channel filter module for ZNC
 
 ### NOTICE
 
-This module is WIP; it requires unmerged changes to ZNC:
-
-https://github.com/znc/znc/pull/687
+**This module is WIP!** It requires unmerged changes to ZNC: [ZNC #687](https://github.com/znc/znc/pull/687)
 
 ### Overview
 
 The channel filter module maintains client specific channel lists
 for identified clients. A typical use case is to have a subset of
 channels for a mobile client.
-
-### Identifiers
-
-ZNC supports passing a client identifier in the password:
-
-    username@identifier/network:password
-
-or in the username:
-
-    username@identifier/network
 
 ### Usage
 
@@ -39,6 +27,16 @@ automatically joined. In other words, all channels are filtered out.
 The list of channels is updated when the identified client joins and
 parts channels. Next time the identified client connects, it will
 automatically join the channels it had active from the last session.
+
+### Identifiers
+
+ZNC supports passing a client identifier in the password:
+
+    username@identifier/network:password
+
+or in the username:
+
+    username@identifier/network
 
 ### Contact
 
