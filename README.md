@@ -3,7 +3,12 @@ A channel filter module for ZNC
 
 ### NOTICE
 
-**This module is WIP!** It requires unmerged changes to ZNC: [#687](https://github.com/znc/znc/pull/687)
+**This module is WIP!** It requires unmerged changes to ZNC:
+[#687](https://github.com/znc/znc/pull/687). Consider the
+current implementation as a proof of concept. The author is
+well aware that the implementation is far from optimal, but
+no further effort is put on this until the necessary change
+will land to ZNC.
 
 ### Overview
 
