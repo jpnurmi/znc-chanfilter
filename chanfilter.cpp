@@ -20,7 +20,7 @@ public:
         AddHelpCommand();
         AddCommand("AddClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::AddClientCommand), "<identifier>", "Add a client.");
         AddCommand("DelClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::DelClientCommand), "<identifier>", "Delete a client.");
-        AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::ListClientsCommand), "", "List clients.");
+        AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::ListClientsCommand), "", "List known clients and their channels.");
         AddCommand("ListChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::ListChansCommand), "[client]", "List channels for a client.");
     }
 
@@ -42,7 +42,7 @@ public:
         ListClientsCommand();
     }
 
-    void ListClientsCommand(const CString& = CString())
+    void ListClientsCommand(const CString& = "")
     {
         CTable table;
         table.AddColumn("Client");
@@ -50,7 +50,10 @@ public:
         table.AddColumn("Channels");
         for (MCString::iterator it = BeginNV(); it != EndNV(); ++it) {
             table.AddRow();
-            table.SetCell("Client", it->first);
+            if (it->first == GetClient()->GetIdentifier())
+                table.SetCell("Client",  "*" + it->first);
+            else
+                table.SetCell("Client",  it->first);
             table.SetCell("Active", CString(GetNetwork()->FindClient(it->first)));
             table.SetCell("Channels", it->second.Ellipsize(128));
         }
