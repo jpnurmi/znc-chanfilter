@@ -77,6 +77,7 @@ public:
                 CChan* channel = client->GetNetwork()->FindChan(name);
                 if (channel) {
                     channel->JoinUser(true, "", client);
+                    channel->SendBuffer(client);
                     return HALT;
                 }
             } else if (cmd.Equals("PART")) {
