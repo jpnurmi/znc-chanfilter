@@ -44,19 +44,22 @@ public:
 
     void ListClientsCommand(const CString& = "")
     {
+        const CString current = GetClient()->GetIdentifier();
+
         CTable table;
         table.AddColumn("Client");
         table.AddColumn("Active");
         table.AddColumn("Channels");
         for (MCString::iterator it = BeginNV(); it != EndNV(); ++it) {
             table.AddRow();
-            if (it->first == GetClient()->GetIdentifier())
+            if (it->first == current)
                 table.SetCell("Client",  "*" + it->first);
             else
                 table.SetCell("Client",  it->first);
             table.SetCell("Active", CString(GetNetwork()->FindClient(it->first)));
             table.SetCell("Channels", it->second.Ellipsize(128));
         }
+
         if (table.empty())
             PutModule("No identified clients");
         else
@@ -65,25 +68,31 @@ public:
 
     void ListChansCommand(const CString& line)
     {
-        CClient* client = GetClient();
+        const CString current = GetClient()->GetIdentifier();
 
-        const CString arg = line.Token(1);
-        if (!arg.empty()) {
-            client = GetNetwork()->FindClient(arg);
-            if (!client) {
-                PutModule("Unknown client: " + arg);
-                return;
-            }
+        CString identifier = line.Token(1);
+        if (identifier.empty())
+            identifier = current;
+
+        if (!identifier.empty() && FindNV(identifier) == EndNV()) {
+            PutModule("Unknown client: " + identifier);
+            return;
         }
 
         CTable table;
+        if (!identifier.empty())
+            table.AddColumn("Client");
         table.AddColumn("Channel");
         table.AddColumn("Status");
 
-        const CString identifier = client->GetIdentifier();
-
         for (CChan* channel : GetNetwork()->GetChans()) {
             table.AddRow();
+            if (!identifier.empty()) {
+                if (identifier == current)
+                    table.SetCell("Client",  "*" + identifier);
+                else
+                    table.SetCell("Client", identifier);
+            }
             table.SetCell("Channel", channel->GetName());
             if (channel->IsDisabled())
                 table.SetCell("Status", "Disabled");
