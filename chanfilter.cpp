@@ -21,6 +21,7 @@ public:
         AddCommand("AddClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::AddClientCommand), "<identifier>", "Add a client.");
         AddCommand("DelClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::DelClientCommand), "<identifier>", "Delete a client.");
         AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::ListClientsCommand), "", "List clients.");
+        AddCommand("ListChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::ListChansCommand), "[client]", "List channels for a client.");
     }
 
     void AddClientCommand(const CString& line)
@@ -57,6 +58,41 @@ public:
             PutModule("No identified clients");
         else
             PutModule(table);
+    }
+
+    void ListChansCommand(const CString& line)
+    {
+        CClient* client = GetClient();
+
+        const CString arg = line.Token(1);
+        if (!arg.empty()) {
+            client = GetNetwork()->FindClient(arg);
+            if (!client) {
+                PutModule("Unknown client: " + arg);
+                return;
+            }
+        }
+
+        CTable table;
+        table.AddColumn("Channel");
+        table.AddColumn("Status");
+
+        const CString identifier = client->GetIdentifier();
+
+        for (CChan* channel : GetNetwork()->GetChans()) {
+            table.AddRow();
+            table.SetCell("Channel", channel->GetName());
+            if (channel->IsDisabled())
+                table.SetCell("Status", "Disabled");
+            else if (channel->IsDetached())
+                table.SetCell("Status", "Detached");
+            else if (identifier.empty() || HasChannel(identifier, channel->GetName()))
+                table.SetCell("Status", "Visible");
+            else
+                table.SetCell("Status", "Hidden");
+        }
+
+        PutModule(table);
     }
 
     virtual void OnClientLogin()
