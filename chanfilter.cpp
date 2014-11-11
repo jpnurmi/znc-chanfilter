@@ -193,18 +193,6 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 		const CString cmd = msg.Token(1);
 		const CString rest = msg.Token(2, true);
 
-		if (cmd.Equals("QUIT") || cmd.Equals("NICK")) {
-			bool filter = true;
-			const SCString channels = GetHiddenChannels(identifier);
-			for (const CString& name : channels) {
-				const CChan* channel = network->FindChan(name);
-				if (channel && channel->FindNick(nick.GetNick()))
-					filter = false;
-			}
-			if (filter)
-				return CONTINUE;
-		}
-
 		CString channel;
 		if (cmd.length() == 3 && isdigit(cmd[0]) && isdigit(cmd[1]) && isdigit(cmd[2])) {
 			unsigned int num = cmd.ToUInt();
