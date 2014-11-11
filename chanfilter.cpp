@@ -69,12 +69,9 @@ public:
 	void ListChansCommand(const CString& line)
 	{
 		const CString current = GetClient()->GetIdentifier();
+		const CString identifier = line.Token(1);
 
-		CString identifier = line.Token(1);
-		if (identifier.empty())
-			identifier = current;
-
-		if (!identifier.empty() && FindNV(identifier) == EndNV()) {
+		if (current.empty() && !identifier.empty() && FindNV(identifier) == EndNV()) {
 			PutModule("Unknown client: " + identifier);
 			return;
 		}
@@ -87,12 +84,8 @@ public:
 
 		for (CChan* channel : GetNetwork()->GetChans()) {
 			table.AddRow();
-			if (!identifier.empty()) {
-				if (identifier == current)
-					table.SetCell("Client",  "*" + identifier);
-				else
-					table.SetCell("Client", identifier);
-			}
+			if (!identifier.empty())
+				table.SetCell("Client", identifier);
 			table.SetCell("Channel", channel->GetName());
 			if (channel->IsDisabled())
 				table.SetCell("Status", "Disabled");
