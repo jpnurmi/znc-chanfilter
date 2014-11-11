@@ -12,6 +12,21 @@
 #include <znc/Chan.h>
 #include <znc/Nick.h>
 
+class CChanFilterTimer : public CTimer
+{
+public:
+	CChanFilterTimer(CModule* module, const CString& identifier, const CString& channel)
+		: CTimer(module, 10, 1, "ChanFilter/" + identifier + "/" + channel, "Delayed channel filter on part"),
+		  m_identifier(identifier), m_channel(channel) { }
+
+protected:
+	virtual void RunJob() override;
+
+private:
+	CString m_identifier;
+	CString m_channel;
+};
+
 class CChanFilterMod : public CModule
 {
 public:
@@ -33,7 +48,6 @@ public:
 	virtual EModRet OnUserRaw(CString& line) override;
 	virtual EModRet OnSendToClient(CString& line, CClient& client) override;
 
-private:
 	SCString GetHiddenChannels(const CString& identifier) const;
 	bool IsChannelVisible(const CString& identifier, const CString& channel) const;
 	void SetChannelVisible(const CString& identifier, const CString& channel, bool visible);
@@ -41,6 +55,19 @@ private:
 	bool AddClient(const CString& identifier);
 	bool DelClient(const CString& identifier);
 };
+
+void CChanFilterTimer::RunJob()
+{
+	CChanFilterMod* module = static_cast<CChanFilterMod*>(GetModule());
+	if (module) {
+		CIRCNetwork* network = module->GetNetwork();
+		if (network) {
+			CClient* client = network->FindClient(m_identifier);
+			if (client)
+				module->SetChannelVisible(m_identifier, m_channel, false);
+		}
+	}
+}
 
 void CChanFilterMod::OnAddClientCommand(const CString& line)
 {
@@ -140,10 +167,10 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 				return HALT;
 			}
 		} else if (cmd.Equals("PART")) {
-			const CString name = line.Token(1);
-			SetChannelVisible(identifier, name, false);
+			const CString channel = line.Token(1);
+			AddTimer(new CChanFilterTimer(this, identifier, channel));
 			// bypass OnUserRaw()
-			client->Write(":" + client->GetNickMask() + " PART " + name + "\r\n");
+			client->Write(":" + client->GetNickMask() + " PART " + channel + "\r\n");
 			return HALT;
 		}
 	}
@@ -201,7 +228,7 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 			ret = HALT;
 
 		if (cmd.Equals("PART") && nick.GetNick().Equals(client.GetNick()))
-			SetChannelVisible(identifier, channel, false);
+			AddTimer(new CChanFilterTimer(this, identifier, channel));
 	}
 	return ret;
 }
