@@ -48,16 +48,16 @@ public:
 
 		CTable table;
 		table.AddColumn("Client");
-		table.AddColumn("Active");
-		table.AddColumn("Channels");
+		table.AddColumn("Connected");
+		table.AddColumn("Hidden channels");
 		for (MCString::iterator it = BeginNV(); it != EndNV(); ++it) {
 			table.AddRow();
 			if (it->first == current)
 				table.SetCell("Client",  "*" + it->first);
 			else
 				table.SetCell("Client",  it->first);
-			table.SetCell("Active", CString(GetNetwork()->FindClient(it->first)));
-			table.SetCell("Channels", it->second.Ellipsize(128));
+			table.SetCell("Connected", CString(GetNetwork()->FindClient(it->first)));
+			table.SetCell("Hidden channels", it->second.Ellipsize(128));
 		}
 
 		if (table.empty())
@@ -98,7 +98,7 @@ public:
 				table.SetCell("Status", "Disabled");
 			else if (channel->IsDetached())
 				table.SetCell("Status", "Detached");
-			else if (identifier.empty() || HasChannel(identifier, channel->GetName()))
+			else if (identifier.empty() || IsChannelVisible(identifier, channel->GetName()))
 				table.SetCell("Status", "Visible");
 			else
 				table.SetCell("Status", "Hidden");
@@ -121,7 +121,7 @@ public:
 			const CString cmd = line.Token(0);
 			if (cmd.Equals("JOIN")) {
 				const CString name = line.Token(1);
-				AddChannel(identifier, name);
+				SetChannelVisible(identifier, name, true);
 				CChan* channel = client->GetNetwork()->FindChan(name);
 				if (channel) {
 					channel->JoinUser(true, "", client);
@@ -130,7 +130,7 @@ public:
 				}
 			} else if (cmd.Equals("PART")) {
 				const CString name = line.Token(1);
-				DelChannel(identifier, name);
+				SetChannelVisible(identifier, name, false);
 				// bypass OnUserRaw()
 				client->Write(":" + client->GetNickMask() + " PART " + name + "\r\n");
 				return HALT;
@@ -156,12 +156,15 @@ public:
 			const CString rest = msg.Token(2, true);
 
 			if (cmd.Equals("QUIT") || cmd.Equals("NICK")) {
-				const SCString channels = GetChannels(identifier);
+				bool filter = true;
+				const SCString channels = GetHiddenChannels(identifier);
 				for (const CString& name : channels) {
 					const CChan* channel = network->FindChan(name);
 					if (channel && channel->FindNick(nick.GetNick()))
-						return CONTINUE;
+						filter = false;
 				}
+				if (filter)
+					return CONTINUE;
 			}
 
 			CString channel;
@@ -174,7 +177,7 @@ public:
 			} else if (cmd.Equals("NOTICE")) {
 				if (nick.NickEquals("ChanServ")) {
 					CString target = rest.Token(1).TrimPrefix_n(":[").TrimSuffix_n("]");
-					if (network->IsChan(target) && !HasChannel(identifier, target))
+					if (network->IsChan(target) && !IsChannelVisible(identifier, target))
 						return HALT;
 				}
 				channel = rest.Token(0);
@@ -183,43 +186,37 @@ public:
 			}
 			channel.TrimPrefix(":");
 
-			if (network->IsChan(channel) && !HasChannel(identifier, channel))
+			if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
 				ret = HALT;
 
 			if (cmd.Equals("PART") && nick.GetNick().Equals(client.GetNick()))
-				DelChannel(identifier, channel);
+				SetChannelVisible(identifier, channel, false);
 		}
 		return ret;
 	}
 
 private:
-	SCString GetChannels(const CString& identifier) const
+	SCString GetHiddenChannels(const CString& identifier) const
 	{
 		SCString channels;
 		GetNV(identifier).Split(",", channels);
 		return channels;
 	}
 
-	bool HasChannel(const CString& identifier, const CString& channel) const
+	bool IsChannelVisible(const CString& identifier, const CString& channel) const
 	{
-		const SCString channels = GetChannels(identifier);
-		return channels.find(channel.AsLower()) != channels.end();
+		const SCString channels = GetHiddenChannels(identifier);
+		return channels.find(channel.AsLower()) == channels.end();
 	}
 
-	void AddChannel(const CString& identifier, const CString& channel)
+	void SetChannelVisible(const CString& identifier, const CString& channel, bool visible)
 	{
 		if (!identifier.empty()) {
-			SCString channels = GetChannels(identifier);
-			channels.insert(channel.AsLower());
-			SetNV(identifier, CString(",").Join(channels.begin(), channels.end()));
-		}
-	}
-
-	void DelChannel(const CString& identifier, const CString& channel)
-	{
-		if (!identifier.empty()) {
-			SCString channels = GetChannels(identifier);
-			channels.erase(channel.AsLower());
+			SCString channels = GetHiddenChannels(identifier);
+			if (visible)
+				channels.erase(channel.AsLower());
+			else
+				channels.insert(channel.AsLower());
 			SetNV(identifier, CString(",").Join(channels.begin(), channels.end()));
 		}
 	}
