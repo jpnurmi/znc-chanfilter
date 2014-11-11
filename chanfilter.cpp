@@ -15,16 +15,34 @@
 class CChanFilterTimer : public CTimer
 {
 public:
-	CChanFilterTimer(CModule* module, const CString& identifier, const CString& channel)
-		: CTimer(module, 10, 1, "ChanFilter/" + identifier + "/" + channel, "Delayed channel filter on part"),
-		  m_identifier(identifier), m_channel(channel) { }
+	CChanFilterTimer(CModule* module, const CString& name, const CString& identifier, const CString& channel)
+		: CTimer(module, 5, 1, name + "/" + identifier + "/" + channel, ""), m_identifier(identifier), m_channel(channel) { }
+
+	CClient* FindClient() const;
+
+protected:
+	CString m_identifier;
+	CString m_channel;
+};
+
+class CChanHideTimer : public CChanFilterTimer
+{
+public:
+	CChanHideTimer(CModule* module, const CString& identifier, const CString& channel)
+		: CChanFilterTimer(module, "ChanFilter/hide", identifier, channel) { }
 
 protected:
 	virtual void RunJob() override;
+};
 
-private:
-	CString m_identifier;
-	CString m_channel;
+class CChanPartTimer : public CChanFilterTimer
+{
+public:
+	CChanPartTimer(CModule* module, const CString& identifier, const CString& channel)
+		: CChanFilterTimer(module, "ChanFilter/part", identifier, channel) { }
+
+protected:
+	virtual void RunJob() override;
 };
 
 class CChanFilterMod : public CModule
@@ -56,17 +74,29 @@ public:
 	bool DelClient(const CString& identifier);
 };
 
-void CChanFilterTimer::RunJob()
+CClient* CChanFilterTimer::FindClient() const
 {
 	CChanFilterMod* module = static_cast<CChanFilterMod*>(GetModule());
 	if (module) {
 		CIRCNetwork* network = module->GetNetwork();
-		if (network) {
-			CClient* client = network->FindClient(m_identifier);
-			if (client)
-				module->SetChannelVisible(m_identifier, m_channel, false);
-		}
+		if (network)
+			return network->FindClient(m_identifier);
 	}
+	return NULL;
+}
+
+void CChanHideTimer::RunJob()
+{
+	CClient* client = FindClient();
+	if (client)
+		static_cast<CChanFilterMod*>(GetModule())->SetChannelVisible(m_identifier, m_channel, false);
+}
+
+void CChanPartTimer::RunJob()
+{
+	CClient* client = FindClient();
+	if (client)
+		client->Write(":" + client->GetNickMask() + " PART " + m_channel + "\r\n");
 }
 
 void CChanFilterMod::OnAddClientCommand(const CString& line)
@@ -168,7 +198,7 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 			}
 		} else if (cmd.Equals("PART")) {
 			const CString channel = line.Token(1);
-			AddTimer(new CChanFilterTimer(this, identifier, channel));
+			AddTimer(new CChanHideTimer(this, identifier, channel));
 			// bypass OnUserRaw()
 			client->Write(":" + client->GetNickMask() + " PART " + channel + "\r\n");
 			return HALT;
@@ -216,7 +246,7 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 			ret = HALT;
 
 		if (cmd.Equals("PART") && nick.GetNick().Equals(client.GetNick()))
-			AddTimer(new CChanFilterTimer(this, identifier, channel));
+			AddTimer(new CChanPartTimer(this, identifier, channel));
 	}
 	return ret;
 }
