@@ -18,31 +18,31 @@ public:
 	MODCONSTRUCTOR(CChanFilterMod)
 	{
 		AddHelpCommand();
-		AddCommand("AddClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::AddClientCommand), "<identifier>", "Add a client.");
-		AddCommand("DelClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::DelClientCommand), "<identifier>", "Delete a client.");
-		AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::ListClientsCommand), "", "List known clients and their channels.");
-		AddCommand("ListChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::ListChansCommand), "[client]", "List channels for a client.");
+		AddCommand("AddClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnAddClientCommand), "<identifier>", "Add a client.");
+		AddCommand("DelClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnDelClientCommand), "<identifier>", "Delete a client.");
+		AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnListClientsCommand), "", "List known clients and their channels.");
+		AddCommand("ListChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnListChansCommand), "[client]", "List channels for a client.");
 	}
 
-	void AddClientCommand(const CString& line)
+	void OnAddClientCommand(const CString& line)
 	{
 		if (!AddClient(line.Token(1))) {
 			PutModule("Usage: AddClient <identifier>");
 			return;
 		}
-		ListClientsCommand();
+		OnListClientsCommand();
 	}
 
-	void DelClientCommand(const CString& line)
+	void OnDelClientCommand(const CString& line)
 	{
 		if (!DelClient(line.Token(1))) {
 			PutModule("Usage: DelClient <identifier>");
 			return;
 		}
-		ListClientsCommand();
+		OnListClientsCommand();
 	}
 
-	void ListClientsCommand(const CString& = "")
+	void OnListClientsCommand(const CString& = "")
 	{
 		const CString current = GetClient()->GetIdentifier();
 
@@ -66,7 +66,7 @@ public:
 			PutModule(table);
 	}
 
-	void ListChansCommand(const CString& line)
+	void OnListChansCommand(const CString& line)
 	{
 		const CString current = GetClient()->GetIdentifier();
 		const CString identifier = line.Token(1);
