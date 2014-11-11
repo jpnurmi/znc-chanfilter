@@ -100,12 +100,12 @@ public:
 		PutModule(table);
 	}
 
-	virtual void OnClientLogin()
+	virtual void OnClientLogin() override
 	{
 		AddClient(GetClient()->GetIdentifier());
 	}
 
-	virtual EModRet OnUserRaw(CString& line)
+	virtual EModRet OnUserRaw(CString& line) override
 	{
 		CClient* client = GetClient();
 		const CString identifier = client->GetIdentifier();
@@ -132,7 +132,7 @@ public:
 		return CONTINUE;
 	}
 
-	virtual EModRet OnSendToClient(CString& line, CClient& client)
+	virtual EModRet OnSendToClient(CString& line, CClient& client) override
 	{
 		EModRet ret = CONTINUE;
 		CIRCNetwork* network = client.GetNetwork();
