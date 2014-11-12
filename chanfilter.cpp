@@ -54,6 +54,7 @@ public:
 
 	bool AddClient(const CString& identifier);
 	bool DelClient(const CString& identifier);
+	std::vector<CClient*> FindClients(const CString& identifier) const;
 
 private:
 	std::set<CClient*> m_quitters;
@@ -170,24 +171,18 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 			SetChannelVisible(identifier, name, true);
 			CChan* channel = client->GetNetwork()->FindChan(name);
 			if (channel) {
-				// TODO: CIRCNetwork::FindClients()
-				for (CClient* cli : client->GetNetwork()->GetClients()) {
-					if (cli->GetIdentifier().Equals(identifier)) {
-						channel->JoinUser(true, "", cli);
-						channel->SendBuffer(cli);
-					}
+				for (CClient* cli : FindClients(identifier)) {
+					channel->JoinUser(true, "", cli);
+					channel->SendBuffer(cli);
 				}
 				return HALT;
 			}
 		} else if (cmd.Equals("PART")) {
 			const CString channel = line.Token(1);
 			AddTimer(new CChanFilterTimer(this, identifier, channel));
-			// TODO: CIRCNetwork::FindClients()
-			for (CClient* cli : client->GetNetwork()->GetClients()) {
-				if (cli->GetIdentifier().Equals(identifier)) {
-					// bypass OnUserRaw()
-					cli->Write(":" + cli->GetNickMask() + " PART " + channel + "\r\n");
-				}
+			for (CClient* cli : FindClients(identifier)) {
+				// bypass OnUserRaw()
+				cli->Write(":" + cli->GetNickMask() + " PART " + channel + "\r\n");
 			}
 			return HALT;
 		} else if (cmd.Equals("QUIT")) {
@@ -282,6 +277,17 @@ bool CChanFilterMod::DelClient(const CString& identifier)
 		return true;
 	}
 	return false;
+}
+
+// TODO: CIRCNetwork::FindClients()
+std::vector<CClient*> CChanFilterMod::FindClients(const CString& identifier) const
+{
+	std::vector<CClient*> clients;
+	for (CClient* client : GetNetwork()->GetClients()) {
+		if (client->GetIdentifier().Equals(identifier))
+			clients.push_back(client);
+	}
+	return clients;
 }
 
 template<> void TModInfo<CChanFilterMod>(CModInfo& Info)
