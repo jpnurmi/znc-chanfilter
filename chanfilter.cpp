@@ -119,10 +119,16 @@ void CChanFilterMod::OnListClientsCommand(const CString&)
 
 void CChanFilterMod::OnListChansCommand(const CString& line)
 {
-	const CString current = GetClient()->GetIdentifier();
-	const CString identifier = line.Token(1);
+	CString identifier = line.Token(1);
+	if (identifier.empty())
+		identifier = GetClient()->GetIdentifier();
 
-	if (current.empty() && !identifier.empty() && FindNV(identifier) == EndNV()) {
+	if (identifier.empty()) {
+		PutModule("Unidentified client");
+		return;
+	}
+
+	if (FindNV(identifier) == EndNV()) {
 		PutModule("Unknown client: " + identifier);
 		return;
 	}
