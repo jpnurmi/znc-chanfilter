@@ -131,21 +131,19 @@ void CChanFilterMod::OnListChansCommand(const CString& line)
 	}
 
 	CTable table;
-	if (!identifier.empty())
-		table.AddColumn("Client");
+	table.AddColumn("Client");
 	table.AddColumn("Channel");
 	table.AddColumn("Status");
 
 	for (CChan* channel : GetNetwork()->GetChans()) {
 		table.AddRow();
-		if (!identifier.empty())
-			table.SetCell("Client", identifier);
+		table.SetCell("Client", identifier);
 		table.SetCell("Channel", channel->GetName());
 		if (channel->IsDisabled())
 			table.SetCell("Status", "Disabled");
 		else if (channel->IsDetached())
 			table.SetCell("Status", "Detached");
-		else if (identifier.empty() || IsChannelVisible(identifier, channel->GetName()))
+		else if (IsChannelVisible(identifier, channel->GetName()))
 			table.SetCell("Status", "Visible");
 		else
 			table.SetCell("Status", "Hidden");
@@ -197,27 +195,25 @@ void CChanFilterMod::OnClientLogin()
 
 CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 {
-	CClient* client = GetClient();
-	CIRCNetwork* network = client->GetNetwork();
-	const CString identifier = client->GetIdentifier();
-
+	const CString identifier = GetClient()->GetIdentifier();
 	if (!identifier.empty()) {
+		CIRCNetwork* network = GetNetwork();
 		const CString cmd = line.Token(0);
 		if (cmd.Equals("JOIN")) {
 			const CString name = line.Token(1);
 			SetChannelVisible(identifier, name, true);
 			CChan* channel = network->FindChan(name);
 			if (channel) {
-				for (CClient* cli : network->FindClients(identifier))
-					channel->JoinUser(true, "", cli);
+				for (CClient* client : network->FindClients(identifier))
+					channel->JoinUser(true, "", client);
 				return HALT;
 			}
 		} else if (cmd.Equals("PART")) {
 			const CString channel = line.Token(1);
 			AddTimer(new CChanFilterTimer(this, identifier, channel));
-			for (CClient* cli : network->FindClients(identifier)) {
+			for (CClient* client : network->FindClients(identifier)) {
 				// bypass OnUserRaw()
-				cli->Write(":" + cli->GetNickMask() + " PART " + channel + "\r\n");
+				client->Write(":" + client->GetNickMask() + " PART " + channel + "\r\n");
 			}
 			return HALT;
 		}
