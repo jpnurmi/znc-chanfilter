@@ -77,20 +77,22 @@ void CChanFilterTimer::RunJob()
 
 void CChanFilterMod::OnAddClientCommand(const CString& line)
 {
-	if (!AddClient(line.Token(1))) {
+	const CString identifier = line.Token(1);
+	if (!AddClient(identifier)) {
 		PutModule("Usage: AddClient <identifier>");
 		return;
 	}
-	OnListClientsCommand();
+	PutModule("Client added: " + identifier);
 }
 
 void CChanFilterMod::OnDelClientCommand(const CString& line)
 {
-	if (!DelClient(line.Token(1))) {
+	const CString identifier = line.Token(1);
+	if (!DelClient(identifier)) {
 		PutModule("Usage: DelClient <identifier>");
 		return;
 	}
-	OnListClientsCommand();
+	PutModule("Client removed: " + identifier);
 }
 
 void CChanFilterMod::OnListClientsCommand(const CString&)
@@ -174,14 +176,22 @@ void CChanFilterMod::OnJoinChansCommand(const CString& line)
 	}
 
 	const SCString channels = GetHiddenChannels(identifier);
+	if (channels.empty()) {
+		PutModule("No hidden channels");
+		return;
+	}
+
+	unsigned int count = 0;
 	for (const CString& name : channels) {
 		SetChannelVisible(identifier, name, true);
 		CChan* channel = GetNetwork()->FindChan(name);
 		if (channel) {
 			for (CClient* client : FindClients(identifier))
 				channel->JoinUser(true, "", client);
+			++count;
 		}
 	}
+	PutModule("Joined " + CString(count) + " channels");
 }
 
 void CChanFilterMod::OnClientLogin()
