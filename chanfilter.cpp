@@ -231,7 +231,7 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 			ret = HALT;
 
 		if (cmd.Equals("PART") && !m_quitters.count(&client) && nick.GetNick().Equals(client.GetNick()))
-			SetChannelVisible(identifier, channel, false);
+			SetChannelVisible(identifier, channel, true);
 	}
 	return ret;
 }
