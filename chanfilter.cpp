@@ -170,15 +170,25 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 			SetChannelVisible(identifier, name, true);
 			CChan* channel = client->GetNetwork()->FindChan(name);
 			if (channel) {
-				channel->JoinUser(true, "", client);
-				channel->SendBuffer(client);
+				// TODO: CIRCNetwork::FindClients()
+				for (CClient* cli : client->GetNetwork()->GetClients()) {
+					if (cli->GetIdentifier().Equals(identifier)) {
+						channel->JoinUser(true, "", cli);
+						channel->SendBuffer(cli);
+					}
+				}
 				return HALT;
 			}
 		} else if (cmd.Equals("PART")) {
 			const CString channel = line.Token(1);
 			AddTimer(new CChanFilterTimer(this, identifier, channel));
-			// bypass OnUserRaw()
-			client->Write(":" + client->GetNickMask() + " PART " + channel + "\r\n");
+			// TODO: CIRCNetwork::FindClients()
+			for (CClient* cli : client->GetNetwork()->GetClients()) {
+				if (cli->GetIdentifier().Equals(identifier)) {
+					// bypass OnUserRaw()
+					cli->Write(":" + cli->GetNickMask() + " PART " + channel + "\r\n");
+				}
+			}
 			return HALT;
 		} else if (cmd.Equals("QUIT")) {
 			m_quitters.insert(client);
