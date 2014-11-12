@@ -1,5 +1,5 @@
-A channel filter module for ZNC
-===============================
+ZNC channel filter module for identified clients
+================================================
 
 ### Overview
 
@@ -14,7 +14,7 @@ maintaining client specific lists of channels. When an identified
 client connects ZNC first time, all channels are joined. The list
 of channels is automatically updated when the identified client
 joins and parts channels. Next time the identified client connects,
-it will join the channels it had active from the last session.
+it joins the channels it had visible from the last session.
 
 It is possible to manage the list of identified clients using the
 following module commands:
