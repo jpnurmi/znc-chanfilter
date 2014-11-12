@@ -174,7 +174,11 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 	if (!identifier.empty()) {
 		CIRCNetwork* network = GetNetwork();
 		const CString cmd = line.Token(0);
+
 		if (cmd.Equals("JOIN")) {
+			// a join command from an identified client either
+			// - restores a hidden channel and is filtered out
+			// - is let through so all clients join a new channel
 			const CString name = line.Token(1);
 			SetChannelVisible(identifier, name, true);
 			CChan* channel = network->FindChan(name);
@@ -184,6 +188,7 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 				return HALT;
 			}
 		} else if (cmd.Equals("PART")) {
+			// a part command from an identified client hides the channel
 			const CString channel = line.Token(1);
 			SetChannelVisible(identifier, channel, false);
 			for (CClient* client : network->FindClients(identifier)) {
@@ -212,6 +217,7 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 		const CString cmd = msg.Token(1);
 		const CString rest = msg.Token(2, true);
 
+		// identify the channel token from (possibly) channel specific messages
 		CString channel;
 		if (cmd.length() == 3 && isdigit(cmd[0]) && isdigit(cmd[1]) && isdigit(cmd[2])) {
 			unsigned int num = cmd.ToUInt();
@@ -231,9 +237,13 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 		}
 		channel.TrimPrefix(":");
 
+		// filter out channel specific messages for hidden channels
 		if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
 			ret = HALT;
 
+		// a self part message from znc to an identified client must
+		// be ignored if the client has already quit/closed connection,
+		// otherwise clear the visibility status
 		if (cmd.Equals("PART") && client.IsConnected() && !client.IsClosed() && nick.GetNick().Equals(client.GetNick()))
 			SetChannelVisible(identifier, channel, true);
 	}
