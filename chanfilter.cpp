@@ -45,7 +45,6 @@ public:
 	void OnJoinChansCommand(const CString& line);
 
 	virtual void OnClientLogin() override;
-	virtual void OnClientDisconnect() override;
 
 	virtual EModRet OnUserRaw(CString& line) override;
 	virtual EModRet OnSendToClient(CString& line, CClient& client) override;
@@ -57,9 +56,6 @@ public:
 	bool AddClient(const CString& identifier);
 	bool DelClient(const CString& identifier);
 	std::vector<CClient*> FindClients(const CString& identifier) const;
-
-private:
-	std::set<CClient*> m_quitters;
 };
 
 void CChanFilterTimer::RunJob()
@@ -199,11 +195,6 @@ void CChanFilterMod::OnClientLogin()
 	AddClient(GetClient()->GetIdentifier());
 }
 
-void CChanFilterMod::OnClientDisconnect()
-{
-	m_quitters.erase(GetClient());
-}
-
 CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 {
 	CClient* client = GetClient();
@@ -228,8 +219,6 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 				cli->Write(":" + cli->GetNickMask() + " PART " + channel + "\r\n");
 			}
 			return HALT;
-		} else if (cmd.Equals("QUIT")) {
-			m_quitters.insert(client);
 		}
 	}
 	return CONTINUE;
@@ -273,7 +262,7 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 		if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
 			ret = HALT;
 
-		if (cmd.Equals("PART") && client.IsConnected() && !m_quitters.count(&client) && nick.GetNick().Equals(client.GetNick()))
+		if (cmd.Equals("PART") && client.IsConnected() && !client.IsClosed() && nick.GetNick().Equals(client.GetNick()))
 			SetChannelVisible(identifier, channel, true);
 	}
 	return ret;
