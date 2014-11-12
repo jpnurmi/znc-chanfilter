@@ -273,7 +273,7 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 		if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
 			ret = HALT;
 
-		if (cmd.Equals("PART") && !m_quitters.count(&client) && nick.GetNick().Equals(client.GetNick()))
+		if (cmd.Equals("PART") && client.IsConnected() && !m_quitters.count(&client) && nick.GetNick().Equals(client.GetNick()))
 			SetChannelVisible(identifier, channel, true);
 	}
 	return ret;
