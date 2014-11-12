@@ -55,7 +55,6 @@ public:
 
 	bool AddClient(const CString& identifier);
 	bool DelClient(const CString& identifier);
-	std::vector<CClient*> FindClients(const CString& identifier) const;
 };
 
 void CChanFilterTimer::RunJob()
@@ -180,9 +179,10 @@ void CChanFilterMod::OnJoinChansCommand(const CString& line)
 	unsigned int count = 0;
 	for (const CString& name : channels) {
 		SetChannelVisible(identifier, name, true);
-		CChan* channel = GetNetwork()->FindChan(name);
+		CIRCNetwork* network = GetNetwork();
+		CChan* channel = network->FindChan(name);
 		if (channel) {
-			for (CClient* client : FindClients(identifier))
+			for (CClient* client : network->FindClients(identifier))
 				channel->JoinUser(true, "", client);
 			++count;
 		}
@@ -198,6 +198,7 @@ void CChanFilterMod::OnClientLogin()
 CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 {
 	CClient* client = GetClient();
+	CIRCNetwork* network = client->GetNetwork();
 	const CString identifier = client->GetIdentifier();
 
 	if (!identifier.empty()) {
@@ -205,16 +206,16 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 		if (cmd.Equals("JOIN")) {
 			const CString name = line.Token(1);
 			SetChannelVisible(identifier, name, true);
-			CChan* channel = client->GetNetwork()->FindChan(name);
+			CChan* channel = network->FindChan(name);
 			if (channel) {
-				for (CClient* cli : FindClients(identifier))
+				for (CClient* cli : network->FindClients(identifier))
 					channel->JoinUser(true, "", cli);
 				return HALT;
 			}
 		} else if (cmd.Equals("PART")) {
 			const CString channel = line.Token(1);
 			AddTimer(new CChanFilterTimer(this, identifier, channel));
-			for (CClient* cli : FindClients(identifier)) {
+			for (CClient* cli : network->FindClients(identifier)) {
 				// bypass OnUserRaw()
 				cli->Write(":" + cli->GetNickMask() + " PART " + channel + "\r\n");
 			}
@@ -309,17 +310,6 @@ bool CChanFilterMod::DelClient(const CString& identifier)
 		return true;
 	}
 	return false;
-}
-
-// TODO: CIRCNetwork::FindClients()
-std::vector<CClient*> CChanFilterMod::FindClients(const CString& identifier) const
-{
-	std::vector<CClient*> clients;
-	for (CClient* client : GetNetwork()->GetClients()) {
-		if (client->GetIdentifier().Equals(identifier))
-			clients.push_back(client);
-	}
-	return clients;
 }
 
 template<> void TModInfo<CChanFilterMod>(CModInfo& Info)
