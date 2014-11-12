@@ -33,14 +33,16 @@ public:
 		AddHelpCommand();
 		AddCommand("AddClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnAddClientCommand), "<identifier>", "Add a client.");
 		AddCommand("DelClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnDelClientCommand), "<identifier>", "Delete a client.");
-		AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnListClientsCommand), "", "List known clients and their channels.");
-		AddCommand("ListChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnListChansCommand), "[client]", "List channels for a client.");
+		AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnListClientsCommand), "", "List known clients and their hidden channels.");
+		AddCommand("ListChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnListChansCommand), "[client]", "List all channels of a client.");
+		AddCommand("JoinChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnJoinChansCommand), "[client]", "Join the hidden channels of a client.");
 	}
 
 	void OnAddClientCommand(const CString& line);
 	void OnDelClientCommand(const CString& line);
 	void OnListClientsCommand(const CString& = "");
 	void OnListChansCommand(const CString& line);
+	void OnJoinChansCommand(const CString& line);
 
 	virtual void OnClientLogin() override;
 	virtual void OnClientDisconnect() override;
@@ -149,6 +151,33 @@ void CChanFilterMod::OnListChansCommand(const CString& line)
 	PutModule(table);
 }
 
+void CChanFilterMod::OnJoinChansCommand(const CString& line)
+{
+	CString identifier = line.Token(1);
+	if (identifier.empty())
+		identifier = GetClient()->GetIdentifier();
+
+	if (identifier.empty()) {
+		PutModule("Unidentified client");
+		return;
+	}
+
+	if (FindNV(identifier) == EndNV()) {
+		PutModule("Unknown client: " + identifier);
+		return;
+	}
+
+	const SCString channels = GetHiddenChannels(identifier);
+	for (const CString& name : channels) {
+		SetChannelVisible(identifier, name, true);
+		CChan* channel = GetNetwork()->FindChan(name);
+		if (channel) {
+			for (CClient* client : FindClients(identifier))
+				channel->JoinUser(true, "", client);
+		}
+	}
+}
+
 void CChanFilterMod::OnClientLogin()
 {
 	AddClient(GetClient()->GetIdentifier());
@@ -171,10 +200,8 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 			SetChannelVisible(identifier, name, true);
 			CChan* channel = client->GetNetwork()->FindChan(name);
 			if (channel) {
-				for (CClient* cli : FindClients(identifier)) {
+				for (CClient* cli : FindClients(identifier))
 					channel->JoinUser(true, "", cli);
-					channel->SendBuffer(cli);
-				}
 				return HALT;
 			}
 		} else if (cmd.Equals("PART")) {
