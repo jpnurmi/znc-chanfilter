@@ -12,19 +12,6 @@
 #include <znc/Chan.h>
 #include <znc/Nick.h>
 
-class CChanFilterTimer : public CTimer
-{
-public:
-	CChanFilterTimer(CModule* module, const CString& identifier, const CString& channel)
-		: CTimer(module, 5, 1, "ChanFilter/" + identifier + "/" + channel, ""), m_identifier(identifier), m_channel(channel) { }
-
-	virtual void RunJob() override;
-
-private:
-	CString m_identifier;
-	CString m_channel;
-};
-
 class CChanFilterMod : public CModule
 {
 public:
@@ -49,6 +36,7 @@ public:
 	virtual EModRet OnUserRaw(CString& line) override;
 	virtual EModRet OnSendToClient(CString& line, CClient& client) override;
 
+private:
 	SCString GetHiddenChannels(const CString& identifier) const;
 	bool IsChannelVisible(const CString& identifier, const CString& channel) const;
 	void SetChannelVisible(const CString& identifier, const CString& channel, bool visible);
@@ -56,19 +44,6 @@ public:
 	bool AddClient(const CString& identifier);
 	bool DelClient(const CString& identifier);
 };
-
-void CChanFilterTimer::RunJob()
-{
-	CChanFilterMod* module = static_cast<CChanFilterMod*>(GetModule());
-	if (module) {
-		CIRCNetwork* network = module->GetNetwork();
-		if (network) {
-			CClient* client = network->FindClient(m_identifier);
-			if (client)
-				module->SetChannelVisible(m_identifier, m_channel, false);
-		}
-	}
-}
 
 void CChanFilterMod::OnAddClientCommand(const CString& line)
 {
@@ -210,7 +185,7 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 			}
 		} else if (cmd.Equals("PART")) {
 			const CString channel = line.Token(1);
-			AddTimer(new CChanFilterTimer(this, identifier, channel));
+			SetChannelVisible(identifier, channel, false);
 			for (CClient* client : network->FindClients(identifier)) {
 				// bypass OnUserRaw()
 				client->Write(":" + client->GetNickMask() + " PART " + channel + "\r\n");
