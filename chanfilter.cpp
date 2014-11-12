@@ -22,14 +22,14 @@ public:
 		AddCommand("DelClient", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnDelClientCommand), "<identifier>", "Delete a client.");
 		AddCommand("ListClients", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnListClientsCommand), "", "List known clients and their hidden channels.");
 		AddCommand("ListChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnListChansCommand), "[client]", "List all channels of a client.");
-		AddCommand("JoinChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnJoinChansCommand), "[client]", "Join the hidden channels of a client.");
+		AddCommand("RestoreChans", static_cast<CModCommand::ModCmdFunc>(&CChanFilterMod::OnRestoreChansCommand), "[client]", "Restore the hidden channels of a client.");
 	}
 
 	void OnAddClientCommand(const CString& line);
 	void OnDelClientCommand(const CString& line);
 	void OnListClientsCommand(const CString& = "");
 	void OnListChansCommand(const CString& line);
-	void OnJoinChansCommand(const CString& line);
+	void OnRestoreChansCommand(const CString& line);
 
 	virtual void OnClientLogin() override;
 
@@ -127,7 +127,7 @@ void CChanFilterMod::OnListChansCommand(const CString& line)
 	PutModule(table);
 }
 
-void CChanFilterMod::OnJoinChansCommand(const CString& line)
+void CChanFilterMod::OnRestoreChansCommand(const CString& line)
 {
 	CString identifier = line.Token(1);
 	if (identifier.empty())
@@ -160,7 +160,7 @@ void CChanFilterMod::OnJoinChansCommand(const CString& line)
 			++count;
 		}
 	}
-	PutModule("Joined " + CString(count) + " channels");
+	PutModule("Restored " + CString(count) + " channels");
 }
 
 void CChanFilterMod::OnClientLogin()
