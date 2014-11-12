@@ -277,19 +277,15 @@ void CChanFilterMod::SetChannelVisible(const CString& identifier, const CString&
 
 bool CChanFilterMod::AddClient(const CString& identifier)
 {
-	if (!identifier.empty()) {
-		SetNV(identifier, GetNV(identifier));
-		return true;
-	}
+	if (!identifier.empty())
+		return SetNV(identifier, GetNV(identifier));
 	return false;
 }
 
 bool CChanFilterMod::DelClient(const CString& identifier)
 {
-	if (!identifier.empty()) {
-		DelNV(identifier);
-		return true;
-	}
+	if (!identifier.empty())
+		return DelNV(identifier);
 	return false;
 }
 
