@@ -15,34 +15,14 @@
 class CChanFilterTimer : public CTimer
 {
 public:
-	CChanFilterTimer(CModule* module, const CString& name, const CString& identifier, const CString& channel)
-		: CTimer(module, 5, 1, name + "/" + identifier + "/" + channel, ""), m_identifier(identifier), m_channel(channel) { }
+	CChanFilterTimer(CModule* module, const CString& identifier, const CString& channel)
+		: CTimer(module, 5, 1, "ChanFilter/" + identifier + "/" + channel, ""), m_identifier(identifier), m_channel(channel) { }
 
-	CClient* FindClient() const;
+	virtual void RunJob() override;
 
-protected:
+private:
 	CString m_identifier;
 	CString m_channel;
-};
-
-class CChanHideTimer : public CChanFilterTimer
-{
-public:
-	CChanHideTimer(CModule* module, const CString& identifier, const CString& channel)
-		: CChanFilterTimer(module, "ChanFilter/hide", identifier, channel) { }
-
-protected:
-	virtual void RunJob() override;
-};
-
-class CChanPartTimer : public CChanFilterTimer
-{
-public:
-	CChanPartTimer(CModule* module, const CString& identifier, const CString& channel)
-		: CChanFilterTimer(module, "ChanFilter/part", identifier, channel) { }
-
-protected:
-	virtual void RunJob() override;
 };
 
 class CChanFilterMod : public CModule
@@ -63,6 +43,8 @@ public:
 	void OnListChansCommand(const CString& line);
 
 	virtual void OnClientLogin() override;
+	virtual void OnClientDisconnect() override;
+
 	virtual EModRet OnUserRaw(CString& line) override;
 	virtual EModRet OnSendToClient(CString& line, CClient& client) override;
 
@@ -72,31 +54,22 @@ public:
 
 	bool AddClient(const CString& identifier);
 	bool DelClient(const CString& identifier);
+
+private:
+	std::set<CClient*> m_quitters;
 };
 
-CClient* CChanFilterTimer::FindClient() const
+void CChanFilterTimer::RunJob()
 {
 	CChanFilterMod* module = static_cast<CChanFilterMod*>(GetModule());
 	if (module) {
 		CIRCNetwork* network = module->GetNetwork();
-		if (network)
-			return network->FindClient(m_identifier);
+		if (network) {
+			CClient* client = network->FindClient(m_identifier);
+			if (client)
+				module->SetChannelVisible(m_identifier, m_channel, false);
+		}
 	}
-	return NULL;
-}
-
-void CChanHideTimer::RunJob()
-{
-	CClient* client = FindClient();
-	if (client)
-		static_cast<CChanFilterMod*>(GetModule())->SetChannelVisible(m_identifier, m_channel, false);
-}
-
-void CChanPartTimer::RunJob()
-{
-	CClient* client = FindClient();
-	if (client)
-		client->Write(":" + client->GetNickMask() + " PART " + m_channel + "\r\n");
 }
 
 void CChanFilterMod::OnAddClientCommand(const CString& line)
@@ -180,6 +153,11 @@ void CChanFilterMod::OnClientLogin()
 	AddClient(GetClient()->GetIdentifier());
 }
 
+void CChanFilterMod::OnClientDisconnect()
+{
+	m_quitters.erase(GetClient());
+}
+
 CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 {
 	CClient* client = GetClient();
@@ -198,10 +176,12 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 			}
 		} else if (cmd.Equals("PART")) {
 			const CString channel = line.Token(1);
-			AddTimer(new CChanHideTimer(this, identifier, channel));
+			AddTimer(new CChanFilterTimer(this, identifier, channel));
 			// bypass OnUserRaw()
 			client->Write(":" + client->GetNickMask() + " PART " + channel + "\r\n");
 			return HALT;
+		} else if (cmd.Equals("QUIT")) {
+			m_quitters.insert(client);
 		}
 	}
 	return CONTINUE;
@@ -245,8 +225,8 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 		if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
 			ret = HALT;
 
-		if (cmd.Equals("PART") && nick.GetNick().Equals(client.GetNick()))
-			AddTimer(new CChanPartTimer(this, identifier, channel));
+		if (cmd.Equals("PART") && !m_quitters.count(&client) && nick.GetNick().Equals(client.GetNick()))
+			SetChannelVisible(identifier, channel, false);
 	}
 	return ret;
 }
