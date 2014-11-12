@@ -1,14 +1,6 @@
 A channel filter module for ZNC
 ===============================
 
-### NOTICE
-
-**This module is WIP!** It requires the latest development version
-(see [8d77faa](https://github.com/znc/znc/commit/8d77faa) and
-[20c9b19](https://github.com/znc/znc/commit/20c9b19)) of ZNC. The
-implementation of the module is not yet optimized. Consider it as
-a proof of concept for the time being.
-
 ### Overview
 
 The channel filter module maintains client specific channel lists
@@ -18,19 +10,18 @@ channels for a mobile client.
 ### Usage
 
 The module detects identified clients automatically, and starts
-maintaining client specific lists of channels. It is possible to
-manage the list of identified clients using the following module
-commands:
+maintaining client specific lists of channels. When an identified
+client connects ZNC first time, all channels are joined. The list
+of channels is automatically updated when the identified client
+joins and parts channels. Next time the identified client connects,
+it will join the channels it had active from the last session.
+
+It is possible to manage the list of identified clients using the
+following module commands:
 
     /msg *chanfilter addclient <identifier>
     /msg *chanfilter removeclient <identifier>
     /msg *chanfilter listclients
-
-When an identified client connects ZNC first time, no channels are
-automatically joined. In other words, all channels are filtered out.
-The list of channels is updated when the identified client joins and
-parts channels. Next time the identified client connects, it will
-automatically join the channels it had active from the last session.
 
 ### Identifiers
 
