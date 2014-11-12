@@ -294,4 +294,4 @@ template<> void TModInfo<CChanFilterMod>(CModInfo& Info)
 	Info.SetWikiPage("chanfilter");
 }
 
-NETWORKMODULEDEFS(CChanFilterMod, "A channel filter module for ZNC")
+NETWORKMODULEDEFS(CChanFilterMod, "A channel filter for identified clients")
