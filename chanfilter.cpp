@@ -31,8 +31,6 @@ public:
 	void OnListChansCommand(const CString& line);
 	void OnRestoreChansCommand(const CString& line);
 
-	virtual void OnClientLogin() override;
-
 	virtual EModRet OnUserRaw(CString& line) override;
 	virtual EModRet OnSendToClient(CString& line, CClient& client) override;
 
@@ -43,25 +41,36 @@ private:
 
 	bool AddClient(const CString& identifier);
 	bool DelClient(const CString& identifier);
+	bool HasClient(const CString& identifier);
 };
 
 void CChanFilterMod::OnAddClientCommand(const CString& line)
 {
 	const CString identifier = line.Token(1);
-	if (!AddClient(identifier)) {
+	if (identifier.empty()) {
 		PutModule("Usage: AddClient <identifier>");
 		return;
 	}
+	if (HasClient(identifier)) {
+		PutModule("Client already exists: " + identifier);
+		return;
+	}
+	AddClient(identifier);
 	PutModule("Client added: " + identifier);
 }
 
 void CChanFilterMod::OnDelClientCommand(const CString& line)
 {
 	const CString identifier = line.Token(1);
-	if (!DelClient(identifier)) {
+	if (identifier.empty()) {
 		PutModule("Usage: DelClient <identifier>");
 		return;
 	}
+	if (!HasClient(identifier)) {
+		PutModule("Unknown client: " + identifier);
+		return;
+	}
+	DelClient(identifier);
 	PutModule("Client removed: " + identifier);
 }
 
@@ -79,7 +88,7 @@ void CChanFilterMod::OnListClientsCommand(const CString&)
 			table.SetCell("Client",  "*" + it->first);
 		else
 			table.SetCell("Client",  it->first);
-		table.SetCell("Connected", CString(GetNetwork()->FindClient(it->first)));
+		table.SetCell("Connected", CString(!GetNetwork()->FindClients(it->first).empty()));
 		table.SetCell("Hidden channels", it->second.Ellipsize(128));
 	}
 
@@ -100,7 +109,7 @@ void CChanFilterMod::OnListChansCommand(const CString& line)
 		return;
 	}
 
-	if (FindNV(identifier) == EndNV()) {
+	if (!HasClient(identifier)) {
 		PutModule("Unknown client: " + identifier);
 		return;
 	}
@@ -138,7 +147,7 @@ void CChanFilterMod::OnRestoreChansCommand(const CString& line)
 		return;
 	}
 
-	if (FindNV(identifier) == EndNV()) {
+	if (!HasClient(identifier)) {
 		PutModule("Unknown client: " + identifier);
 		return;
 	}
@@ -163,15 +172,10 @@ void CChanFilterMod::OnRestoreChansCommand(const CString& line)
 	PutModule("Restored " + CString(count) + " channels");
 }
 
-void CChanFilterMod::OnClientLogin()
-{
-	AddClient(GetClient()->GetIdentifier());
-}
-
 CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 {
 	const CString identifier = GetClient()->GetIdentifier();
-	if (!identifier.empty()) {
+	if (HasClient(identifier)) {
 		CIRCNetwork* network = GetNetwork();
 		const CString cmd = line.Token(0);
 
@@ -205,9 +209,9 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 {
 	EModRet ret = CONTINUE;
 	CIRCNetwork* network = client.GetNetwork();
-	CString identifier = client.GetIdentifier();
+	const CString identifier = client.GetIdentifier();
 
-	if (network && !identifier.empty()) {
+	if (network && HasClient(identifier)) {
 		// discard message tags
 		CString msg = line;
 		if (msg.StartsWith("@"))
@@ -277,16 +281,17 @@ void CChanFilterMod::SetChannelVisible(const CString& identifier, const CString&
 
 bool CChanFilterMod::AddClient(const CString& identifier)
 {
-	if (!identifier.empty())
-		return SetNV(identifier, GetNV(identifier));
-	return false;
+	return SetNV(identifier, GetNV(identifier));
 }
 
 bool CChanFilterMod::DelClient(const CString& identifier)
 {
-	if (!identifier.empty())
-		return DelNV(identifier);
-	return false;
+	return DelNV(identifier);
+}
+
+bool CChanFilterMod::HasClient(const CString& identifier)
+{
+	return !identifier.empty() && FindNV(identifier) != EndNV();
 }
 
 template<> void TModInfo<CChanFilterMod>(CModInfo& Info)
