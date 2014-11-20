@@ -165,7 +165,7 @@ void CChanFilterMod::OnRestoreChansCommand(const CString& line)
 		CChan* channel = network->FindChan(name);
 		if (channel) {
 			for (CClient* client : network->FindClients(identifier))
-				channel->JoinUser(true, "", client);
+				channel->AttachUser(client);
 			++count;
 		}
 	}
@@ -188,7 +188,7 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 			CChan* channel = network->FindChan(name);
 			if (channel) {
 				for (CClient* client : network->FindClients(identifier))
-					channel->JoinUser(true, "", client);
+					channel->AttachUser(client);
 				return HALT;
 			}
 		} else if (cmd.Equals("PART")) {
