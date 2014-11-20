@@ -196,7 +196,7 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 			const CString channel = line.Token(1);
 			SetChannelVisible(identifier, channel, false);
 			for (CClient* client : network->FindClients(identifier)) {
-				// bypass OnUserRaw()
+				// bypass OnSendToClient()
 				client->Write(":" + client->GetNickMask() + " PART " + channel + "\r\n");
 			}
 			return HALT;
