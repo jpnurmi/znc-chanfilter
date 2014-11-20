@@ -223,23 +223,8 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 
 		// identify the channel token from (possibly) channel specific messages
 		CString channel;
-		if (cmd.length() == 3 && isdigit(cmd[0]) && isdigit(cmd[1]) && isdigit(cmd[2])) {
-			unsigned int num = cmd.ToUInt();
-			if (num == 353) // RPL_NAMES
-				channel = rest.Token(2);
-			else
-				channel = rest.Token(1);
-		} else if (cmd.Equals("NOTICE")) {
-			if (nick.NickEquals("ChanServ")) {
-				CString target = rest.Token(1).TrimPrefix_n(":[").TrimSuffix_n("]");
-				if (network->IsChan(target) && !IsChannelVisible(identifier, target))
-					return HALT;
-			}
-			channel = rest.Token(0);
-		} else if (cmd.Equals("PRIVMSG") || cmd.Equals("JOIN") || cmd.Equals("PART") || cmd.Equals("MODE") || cmd.Equals("KICK") || cmd.Equals("TOPIC")) {
-			channel = rest.Token(0);
-		}
-		channel.TrimPrefix(":");
+		if (cmd.Equals("PRIVMSG") || cmd.Equals("NOTICE") || cmd.Equals("JOIN") || cmd.Equals("PART") || cmd.Equals("MODE") || cmd.Equals("KICK") || cmd.Equals("TOPIC"))
+			channel = rest.Token(0).TrimPrefix_n(":");
 
 		// filter out channel specific messages for hidden channels
 		if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
