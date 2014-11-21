@@ -223,8 +223,17 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 
 		// identify the channel token from (possibly) channel specific messages
 		CString channel;
-		if (cmd.Equals("PRIVMSG") || cmd.Equals("NOTICE") || cmd.Equals("JOIN") || cmd.Equals("PART") || cmd.Equals("MODE") || cmd.Equals("KICK") || cmd.Equals("TOPIC"))
+		if (cmd.length() == 3 && isdigit(cmd[0]) && isdigit(cmd[1]) && isdigit(cmd[2])) {
+			// must block the following numeric replies that are automatically sent on attach:
+			// RPL_NAMREPLY, RPL_ENDOFNAMES, RPL_TOPIC, RPL_TOPICWHOTIME...
+			unsigned int num = cmd.ToUInt();
+			if (num == 353) // RPL_NAMREPLY
+				channel = rest.Token(2);
+			else
+				channel = rest.Token(1);
+		} else if (cmd.Equals("PRIVMSG") || cmd.Equals("NOTICE") || cmd.Equals("JOIN") || cmd.Equals("PART") || cmd.Equals("MODE") || cmd.Equals("KICK") || cmd.Equals("TOPIC")) {
 			channel = rest.Token(0).TrimPrefix_n(":");
+		}
 
 		// filter out channel specific messages for hidden channels
 		if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
