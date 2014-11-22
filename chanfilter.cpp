@@ -237,7 +237,7 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
 
 		// filter out channel specific messages for hidden channels
 		if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
-			ret = HALT;
+			ret = HALTCORE;
 
 		// a self part message from znc to an identified client must
 		// be ignored if the client has already quit/closed connection,
