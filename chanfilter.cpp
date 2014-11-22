@@ -27,7 +27,7 @@ public:
 
     void OnAddClientCommand(const CString& line);
     void OnDelClientCommand(const CString& line);
-    void OnListClientsCommand(const CString& = "");
+    void OnListClientsCommand(const CString& line);
     void OnListChansCommand(const CString& line);
     void OnRestoreChansCommand(const CString& line);
 
@@ -74,7 +74,7 @@ void CChanFilterMod::OnDelClientCommand(const CString& line)
     PutModule("Client removed: " + identifier);
 }
 
-void CChanFilterMod::OnListClientsCommand(const CString&)
+void CChanFilterMod::OnListClientsCommand(const CString& line)
 {
     const CString current = GetClient()->GetIdentifier();
 
