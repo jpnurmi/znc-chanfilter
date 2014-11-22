@@ -182,7 +182,7 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
         if (cmd.Equals("JOIN")) {
             // a join command from an identified client either
             // - restores a hidden channel and is filtered out
-            // - is let through so all clients join a new channel
+            // - is let through so ZNC joins the channel
             const CString name = line.Token(1);
             SetChannelVisible(identifier, name, true);
             CChan* channel = network->FindChan(name);
@@ -193,14 +193,14 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
             }
         } else if (cmd.Equals("PART")) {
             // a part command from an identified client either
-            // - hides the channel and is filtered out
-            // - is let through so all clients part the channel
+            // - hides a visible channel and is filtered out
+            // - is let through so ZNC parts the channel
             const CString name = line.Token(1);
             CChan* channel = network->FindChan(name);
             if (channel && IsChannelVisible(identifier, name)) {
                 SetChannelVisible(identifier, name, false);
                 for (CClient* client : network->FindClients(identifier)) {
-                    // bypass OnSendToClient()
+                    // use Write() instead of PutClient() to bypass OnSendToClient()
                     client->Write(":" + client->GetNickMask() + " PART " + name + "\r\n");
                 }
                 return HALT;
