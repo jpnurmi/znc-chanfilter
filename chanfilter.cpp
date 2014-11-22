@@ -192,14 +192,19 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
                 return HALT;
             }
         } else if (cmd.Equals("PART")) {
-            // a part command from an identified client hides the channel
-            const CString channel = line.Token(1);
-            SetChannelVisible(identifier, channel, false);
-            for (CClient* client : network->FindClients(identifier)) {
-                // bypass OnSendToClient()
-                client->Write(":" + client->GetNickMask() + " PART " + channel + "\r\n");
+            // a part command from an identified client either
+            // - hides the channel and is filtered out
+            // - is let through so all clients part the channel
+            const CString name = line.Token(1);
+            CChan* channel = network->FindChan(name);
+            if (channel && IsChannelVisible(identifier, name)) {
+                SetChannelVisible(identifier, name, false);
+                for (CClient* client : network->FindClients(identifier)) {
+                    // bypass OnSendToClient()
+                    client->Write(":" + client->GetNickMask() + " PART " + name + "\r\n");
+                }
+                return HALT;
             }
-            return HALT;
         }
     }
     return CONTINUE;
