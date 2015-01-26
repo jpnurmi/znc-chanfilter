@@ -8,6 +8,7 @@
 
 #include <znc/Modules.h>
 #include <znc/IRCNetwork.h>
+#include <znc/IRCSock.h>
 #include <znc/Client.h>
 #include <znc/Chan.h>
 #include <znc/Nick.h>
@@ -239,6 +240,11 @@ CModule::EModRet CChanFilterMod::OnSendToClient(CString& line, CClient& client)
         } else if (cmd.Equals("PRIVMSG") || cmd.Equals("NOTICE") || cmd.Equals("JOIN") || cmd.Equals("PART") || cmd.Equals("MODE") || cmd.Equals("KICK") || cmd.Equals("TOPIC")) {
             channel = rest.Token(0).TrimPrefix_n(":");
         }
+
+        // remove status prefix (#1)
+        CIRCSock* sock = client.GetIRCSock();
+        if (sock)
+            channel.TrimLeft(sock->GetISupport("STATUSMSG", ""));
 
         // filter out channel specific messages for hidden channels
         if (network->IsChan(channel) && !IsChannelVisible(identifier, channel))
