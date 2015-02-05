@@ -184,7 +184,21 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
             // a join command from an identified client either
             // - restores a hidden channel and is filtered out,
             // - is let through so ZNC joins the channel,
+            // - or "0" as a special case hides all channels (issue #2)
             const CString arg = line.Token(1);
+            if (arg.Equals("0")) {
+                for (CChan* channel : network->GetChans()) {
+                    const CString name = channel->GetName();
+                    if (channel->IsOn() && IsChannelVisible(identifier, name)) {
+                        SetChannelVisible(identifier, name, false);
+                        for (CClient* client : network->FindClients(identifier)) {
+                            // use Write() instead of PutClient() to bypass OnSendToClient()
+                            client->Write(":" + client->GetNickMask() + " PART " + name + "\r\n");
+                        }
+                    }
+                }
+                return HALT;
+            }
             SetChannelVisible(identifier, arg, true);
             CChan* channel = network->FindChan(arg);
             if (channel) {
