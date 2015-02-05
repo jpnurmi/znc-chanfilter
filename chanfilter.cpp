@@ -182,11 +182,11 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
 
         if (cmd.Equals("JOIN")) {
             // a join command from an identified client either
-            // - restores a hidden channel and is filtered out
-            // - is let through so ZNC joins the channel
-            const CString name = line.Token(1);
-            SetChannelVisible(identifier, name, true);
-            CChan* channel = network->FindChan(name);
+            // - restores a hidden channel and is filtered out,
+            // - is let through so ZNC joins the channel,
+            const CString arg = line.Token(1);
+            SetChannelVisible(identifier, arg, true);
+            CChan* channel = network->FindChan(arg);
             if (channel) {
                 for (CClient* client : network->FindClients(identifier))
                     channel->AttachUser(client);
@@ -196,13 +196,13 @@ CModule::EModRet CChanFilterMod::OnUserRaw(CString& line)
             // a part command from an identified client either
             // - hides a visible channel and is filtered out
             // - is let through so ZNC parts the channel
-            const CString name = line.Token(1);
-            CChan* channel = network->FindChan(name);
-            if (channel && IsChannelVisible(identifier, name)) {
-                SetChannelVisible(identifier, name, false);
+            const CString arg = line.Token(1);
+            CChan* channel = network->FindChan(arg);
+            if (channel && IsChannelVisible(identifier, arg)) {
+                SetChannelVisible(identifier, arg, false);
                 for (CClient* client : network->FindClients(identifier)) {
                     // use Write() instead of PutClient() to bypass OnSendToClient()
-                    client->Write(":" + client->GetNickMask() + " PART " + name + "\r\n");
+                    client->Write(":" + client->GetNickMask() + " PART " + arg + "\r\n");
                 }
                 return HALT;
             }
