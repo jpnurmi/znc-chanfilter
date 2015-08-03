@@ -20,6 +20,11 @@
 #include <znc/Client.h>
 #include <znc/Chan.h>
 #include <znc/Nick.h>
+#include <znc/version.h>
+
+#if (VERSION_MAJOR < 1) || (VERSION_MAJOR == 1 && VERSION_MINOR < 6)
+#error The chanfilter module requires ZNC version 1.6.0 or later.
+#endif
 
 class CChanFilterMod : public CModule
 {
